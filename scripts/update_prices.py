@@ -30,10 +30,11 @@ def jpy_per_gram(rate_value: float) -> float:
 
 
 def fetch_latest() -> list[dict]:
+    # latestは複数通貨を1回で取得できる
     resp = requests.get(f"{BASE_URL}/latest", params={
         "api_key":    API_KEY,
         "base":       "JPY",
-        "currencies": "XAU",
+        "currencies": "XAU,XPT",
     }, timeout=30)
     resp.raise_for_status()
     data  = resp.json()
@@ -45,15 +46,16 @@ def fetch_latest() -> list[dict]:
     return [{
         "date":               today,
         "gold_jpy_per_g":     jpy_per_gram(rates["XAU"]),
-        "platinum_jpy_per_g": 0.0,
+        "platinum_jpy_per_g": jpy_per_gram(rates["XPT"]),
     }]
 
 
-def fetch_timeframe(start: date, end: date) -> list[dict]:
+def fetch_timeframe_single(start: date, end: date, currency: str) -> dict[str, float]:
+    """timeframeは無料プランで1通貨のみ。{date_str: jpy_per_gram} を返す。"""
     resp = requests.get(f"{BASE_URL}/timeframe", params={
         "api_key":    API_KEY,
         "base":       "JPY",
-        "currencies": "XAU",
+        "currencies": currency,
         "start_date": start.isoformat(),
         "end_date":   end.isoformat(),
     }, timeout=30)
@@ -61,13 +63,22 @@ def fetch_timeframe(start: date, end: date) -> list[dict]:
     data = resp.json()
     if not data.get("success"):
         raise ValueError(f"API returned error: {data}")
+    return {
+        date_str: jpy_per_gram(rates[currency])
+        for date_str, rates in data["rates"].items()
+    }
+
+
+def fetch_timeframe(start: date, end: date) -> list[dict]:
+    gold_rates     = fetch_timeframe_single(start, end, "XAU")
+    platinum_rates = fetch_timeframe_single(start, end, "XPT")
     return [
         {
             "date":               date_str,
-            "gold_jpy_per_g":     jpy_per_gram(rates["XAU"]),
-            "platinum_jpy_per_g": 0.0,
+            "gold_jpy_per_g":     gold_price,
+            "platinum_jpy_per_g": platinum_rates.get(date_str, 0.0),
         }
-        for date_str, rates in data["rates"].items()
+        for date_str, gold_price in gold_rates.items()
     ]
 
 
