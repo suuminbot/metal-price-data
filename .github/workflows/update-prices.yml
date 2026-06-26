@@ -1,0 +1,45 @@
+name: Update Metal Prices
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 毎日 JST 10:00 (UTC 01:00) に自動実行
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: '過去3年分を一括取得する（初回セットアップ時のみ使用）'
+        type: boolean
+        default: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch prices
+        run: |
+          if [ "${{ github.event.inputs.backfill }}" = "true" ]; then
+            python scripts/update_prices.py --backfill
+          else
+            python scripts/update_prices.py
+          fi
+        env:
+          METAL_API_KEY: ${{ secrets.METAL_API_KEY }}
+
+      - name: Commit & push
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Actions"
+          git add data/prices.json
+          git diff --cached --quiet || git commit -m "chore: update metal prices $(date +%Y-%m-%d)"
+          git push
