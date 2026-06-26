@@ -32,17 +32,19 @@ def fetch_latest() -> list[dict]:
     resp = requests.get(f"{BASE_URL}/latest", params={
         "api_key":    API_KEY,
         "base":       "JPY",
-        "currencies": "XAU,XPT",
+        "currencies": "XAU",
     }, timeout=30)
     resp.raise_for_status()
     data  = resp.json()
+    if not data.get("success"):
+        raise ValueError(f"API returned error: {data}")
     today = date.today().isoformat()
     rates = data["rates"]
     print(f"Fetched latest: {today}", flush=True)
     return [{
         "date":               today,
         "gold_jpy_per_g":     jpy_per_gram(rates["XAU"]),
-        "platinum_jpy_per_g": jpy_per_gram(rates["XPT"]),
+        "platinum_jpy_per_g": 0.0,
     }]
 
 
@@ -50,23 +52,22 @@ def fetch_timeframe(start: date, end: date) -> list[dict]:
     resp = requests.get(f"{BASE_URL}/timeframe", params={
         "api_key":    API_KEY,
         "base":       "JPY",
-        "currencies": "XAU,XPT",
+        "currencies": "XAU",
         "start_date": start.isoformat(),
         "end_date":   end.isoformat(),
     }, timeout=30)
     resp.raise_for_status()
     data = resp.json()
-    print(f"API response: {data}", flush=True)
     if not data.get("success"):
         raise ValueError(f"API returned error: {data}")
-    entries = []
-    for date_str, rates in data["rates"].items():
-        entries.append({
+    return [
+        {
             "date":               date_str,
             "gold_jpy_per_g":     jpy_per_gram(rates["XAU"]),
-            "platinum_jpy_per_g": jpy_per_gram(rates["XPT"]),
-        })
-    return entries
+            "platinum_jpy_per_g": 0.0,
+        }
+        for date_str, rates in data["rates"].items()
+    ]
 
 
 def backfill() -> list[dict]:
