@@ -19,7 +19,8 @@ API_KEY         = os.environ["METAL_API_KEY"]
 BASE_URL        = "https://api.metalpriceapi.com/v1"
 DATA_PATH       = Path("data/prices.json")
 TROY_OZ_TO_GRAM = 31.1035
-BACKFILL_YEARS  = 3
+BACKFILL_DAYS   = 28   # 5日チャンク × 6回 = 30日分
+CHUNK_DAYS      = 4    # 無料プランの上限は5日なので4日区切りで安全に取得
 
 
 def jpy_per_gram(rate_value: float) -> float:
@@ -73,11 +74,12 @@ def fetch_timeframe(start: date, end: date) -> list[dict]:
 def backfill() -> list[dict]:
     today   = date.today()
     entries = []
-    for i in range(BACKFILL_YEARS, 0, -1):
-        start = today - timedelta(days=365 * i)
-        end   = min(today - timedelta(days=365 * (i - 1) - 1), today)
-        print(f"Fetching {start} → {end} …", flush=True)
-        entries.extend(fetch_timeframe(start, end))
+    chunk_end = today
+    while chunk_end > today - timedelta(days=BACKFILL_DAYS):
+        chunk_start = max(chunk_end - timedelta(days=CHUNK_DAYS), today - timedelta(days=BACKFILL_DAYS))
+        print(f"Fetching {chunk_start} → {chunk_end} …", flush=True)
+        entries.extend(fetch_timeframe(chunk_start, chunk_end))
+        chunk_end = chunk_start - timedelta(days=1)
     entries.sort(key=lambda e: e["date"], reverse=True)
     return entries
 
@@ -111,7 +113,7 @@ def main() -> None:
         existing       = load_existing()
         existing_dates = {e["date"] for e in existing}
         merged         = [e for e in new_entries if e["date"] not in existing_dates] + existing
-        cutoff         = (date.today() - timedelta(days=365 * BACKFILL_YEARS)).isoformat()
+        cutoff         = (date.today() - timedelta(days=365 * 3)).isoformat()
         history        = [e for e in merged if e["date"] >= cutoff]
 
     save(history)
