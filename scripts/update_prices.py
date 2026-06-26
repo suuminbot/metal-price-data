@@ -55,7 +55,10 @@ def fetch_timeframe(start: date, end: date) -> list[dict]:
         "end_date":   end.isoformat(),
     }, timeout=30)
     resp.raise_for_status()
-    data    = resp.json()
+    data = resp.json()
+    print(f"API response keys: {list(data.keys())}", flush=True)
+    if not data.get("success"):
+        raise ValueError(f"API returned error: {data}")
     entries = []
     for date_str, rates in data["rates"].items():
         entries.append({
