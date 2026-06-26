@@ -56,7 +56,7 @@ def fetch_timeframe(start: date, end: date) -> list[dict]:
     }, timeout=30)
     resp.raise_for_status()
     data = resp.json()
-    print(f"API response keys: {list(data.keys())}", flush=True)
+    print(f"API response: {data}", flush=True)
     if not data.get("success"):
         raise ValueError(f"API returned error: {data}")
     entries = []
