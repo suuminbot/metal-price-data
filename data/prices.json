@@ -1,6 +1,11 @@
 {
-  "updated_at": "2026-06-26T00:00:00Z",
+  "updated_at": "2026-06-27T00:00:00Z",
   "history": [
+    {
+      "date": "2026-06-27",
+      "gold_jpy_per_g": 20893.4,
+      "platinum_jpy_per_g": 8291.4
+    },
     {
       "date": "2026-06-26",
       "gold_jpy_per_g": 20893.4,
